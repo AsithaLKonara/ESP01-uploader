@@ -1,0 +1,46 @@
+{
+  "timestamp": 1755726590.4192734,
+  "upload_history": {},
+  "current_status": {
+    "status": "idle",
+    "progress": 0,
+    "bytes_sent": 0,
+    "total_bytes": 0,
+    "error": null,
+    "verification": "pending",
+    "local_hash": "",
+    "esp_hash": "",
+    "verification_method": "pending",
+    "upload_time": null,
+    "requirements_status": "pending"
+  },
+  "esp_interface": {
+    "status": "connected",
+    "interface_type": "smart_http_upload_with_requirements_and_esp_verification",
+    "upload_endpoint": "/upload",
+    "hash_endpoint": "/firmware-hash",
+    "supports_files": true,
+    "supports_smart_verification": true,
+    "supports_esp_hash_verification": false,
+    "supports_auto_requirements": true,
+    "verification_method": "local_hash_plus_upload_success",
+    "page_content": "<html><body><h2>LED Matrix File Upload</h2><form method='POST' action='/upload' enctype='multipart/form-data'><input type='file' name='file'><br><br><input type='submit' value='Upload'></form></body></html>",
+    "has_upload_form": true
+  },
+  "requirements_report": {
+    "total_required": 7,
+    "available": [
+      "requests",
+      "hashlib",
+      "json",
+      "threading",
+      "time",
+      "os",
+      "pathlib"
+    ],
+    "missing": [],
+    "install_log": [],
+    "check_log": [],
+    "all_available": true
+  }
+}

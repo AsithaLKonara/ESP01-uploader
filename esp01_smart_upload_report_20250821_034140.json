@@ -1,0 +1,37 @@
+{
+  "timestamp": 1755727900.8464282,
+  "upload_history": {},
+  "current_status": {
+    "status": "idle",
+    "progress": 0,
+    "bytes_sent": 0,
+    "total_bytes": 0,
+    "error": null,
+    "verification": "pending",
+    "local_hash": "",
+    "esp_hash": "",
+    "verification_method": "pending",
+    "upload_time": null,
+    "requirements_status": "pending"
+  },
+  "esp_interface": {
+    "status": "error",
+    "error": "HTTPConnectionPool(host='192.168.4.1', port=80): Max retries exceeded with url: / (Caused by ConnectTimeoutError(<urllib3.connection.HTTPConnection object at 0x00000176418D34A0>, 'Connection to 192.168.4.1 timed out. (connect timeout=5)'))"
+  },
+  "requirements_report": {
+    "total_required": 7,
+    "available": [
+      "requests",
+      "hashlib",
+      "json",
+      "threading",
+      "time",
+      "os",
+      "pathlib"
+    ],
+    "missing": [],
+    "install_log": [],
+    "check_log": [],
+    "all_available": true
+  }
+}

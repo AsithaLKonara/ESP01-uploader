@@ -1,0 +1,24 @@
+{
+  "timestamp": 1755724630.361205,
+  "upload_history": {},
+  "current_status": {
+    "status": "idle",
+    "progress": 0,
+    "bytes_sent": 0,
+    "total_bytes": 0,
+    "error": null,
+    "verification": "pending",
+    "local_hash": "",
+    "upload_time": null
+  },
+  "esp_interface": {
+    "status": "connected",
+    "interface_type": "smart_http_upload",
+    "upload_endpoint": "/upload",
+    "supports_files": true,
+    "supports_smart_verification": true,
+    "verification_method": "local_hash_plus_upload_success",
+    "page_content": "<html><body><h2>LED Matrix File Upload</h2><form method='POST' action='/upload' enctype='multipart/form-data'><input type='file' name='file'><br><br><input type='submit' value='Upload'></form></body></html>",
+    "has_upload_form": true
+  }
+}
