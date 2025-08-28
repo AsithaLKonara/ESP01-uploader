@@ -178,10 +178,12 @@ class SmartESPUploaderWithRequirements:
         self.esp_base_url = "http://192.168.4.1"
         self.upload_url = f"{self.esp_base_url}/upload"
         self.hash_url = f"{self.esp_base_url}/firmware-hash"
-        self.timeout = 30.0
+        self.timeout = 300.0  # 300 seconds timeout for large files (up to 700KB)
         
         # Upload history for verification
         self.upload_history = {}
+        
+
         
         # Requirements manager
         self.requirements_manager = RequirementsManager()
@@ -281,11 +283,19 @@ class SmartESPUploaderWithRequirements:
             
             # Step 5: Perform HTTP upload
             self.log_message("📋 Step 5: Starting file upload...")
-            success = self._perform_http_upload(file_path, progress_callback)
+            
+            # Use original file
+            upload_file_path = file_path
+            self.log_message(f"📤 Uploading file: {os.path.basename(upload_file_path)}")
+            self.log_message(f"📊 File size: {os.path.getsize(upload_file_path)} bytes")
+            
+            success = self._perform_http_upload(upload_file_path, progress_callback)
             
             if success:
                 # Store upload in history
                 self._store_upload_history(file_path, local_hash)
+                
+
                 
                 if verify:
                     # Step 6: Smart verification (local hash + upload success)
@@ -403,7 +413,7 @@ class SmartESPUploaderWithRequirements:
             return False
     
     def _validate_file(self, file_path: str) -> bool:
-        """Validate file for upload"""
+        """Validate file for upload with size optimization"""
         try:
             if not os.path.exists(file_path):
                 self.log_message(f"❌ File not found: {file_path}")
@@ -414,11 +424,26 @@ class SmartESPUploaderWithRequirements:
                 self.log_message(f"❌ File is empty: {file_path}")
                 return False
             
-            self.log_message(f"✅ File validated: {os.path.basename(file_path)} ({file_size} bytes)")
+            # Check file size limit (700KB)
+            if file_size > 716800:  # 700KB limit (700 * 1024)
+                self.log_message(f"⚠️  File is too large: {os.path.basename(file_path)} ({file_size} bytes)")
+                self.log_message(f"❌ File exceeds 700KB limit")
+                return False
+            else:
+                self.log_message(f"✅ File validated: {os.path.basename(file_path)} ({file_size} bytes)")
+            
             return True
         except Exception as e:
             self.log_message(f"❌ File validation error: {str(e)}")
             return False
+    
+
+    
+
+    
+
+    
+
     
     def _calculate_file_hash(self, file_path: str) -> str:
         """Calculate SHA256 hash of file"""

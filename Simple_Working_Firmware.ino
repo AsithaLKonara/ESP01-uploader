@@ -1,22 +1,30 @@
+/*
+ * Simple Working LED Matrix Firmware for ESP-01
+ * Combines basic WiFi file upload with proven LED matrix output
+ * This version is simplified to avoid crashes
+ */
+
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <FS.h>   // SPIFFS for file storage
-#include <bearssl/bearssl_hash.h> // Built-in SHA256 support for ESP8266
 
 // Wi-Fi Access Point credentials
 const char* apSSID = "MatrixUploader";
 const char* apPASS = "12345678";
 
+// LED Matrix Data Pin Configuration
+#define MATRIX_DATA_PIN 3   // GPIO3 (RX) - Data pin
+#define MATRIX_CLOCK_PIN 1  // GPIO1 (TX) - Clock pin (if needed)
+
 ESP8266WebServer server(80);
 
-// File storage and hash tracking
+// File storage tracking
 String lastUploadedFile = "";
 size_t lastUploadedSize = 0;
-String lastUploadedHash = "";
 
-// Handle root page with enhanced upload form and status display
+// Handle root page
 void handleRoot() {
-  String page = "<html><head><title>Enhanced LED Matrix Uploader</title>"
+  String page = "<html><head><title>Simple LED Matrix Uploader</title>"
                 "<meta charset='utf-8'>"
                 "<style>"
                 "body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }"
@@ -25,20 +33,14 @@ void handleRoot() {
                 ".upload-form { border: 2px dashed #3498db; padding: 25px; margin: 20px 0; border-radius: 8px; text-align: center; }"
                 ".upload-form input[type='file'] { margin: 10px 0; }"
                 ".upload-form input[type='submit'] { background: #3498db; color: white; padding: 12px 30px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }"
-                ".upload-form input[type='submit']:hover { background: #2980b9; }"
                 ".status { padding: 15px; margin: 20px 0; border-radius: 8px; }"
                 ".success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }"
                 ".info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }"
-                ".hash-display { font-family: monospace; background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #dee2e6; word-break: break-all; }"
-                ".endpoints { background: #e8f4f8; padding: 20px; border-radius: 8px; margin: 20px 0; }"
-                ".endpoints h3 { margin-top: 0; color: #2c3e50; }"
-                ".endpoints ul { margin: 10px 0; padding-left: 20px; }"
-                ".endpoints li { margin: 5px 0; }"
                 "</style></head>"
                 "<body>"
                 "<div class='container'>"
-                "<h1>🚀 Enhanced LED Matrix Uploader</h1>"
-                "<p style='text-align: center; color: #7f8c8d;'>Professional ESP-01 WiFi firmware uploader with hash verification</p>"
+                "<h1>🚀 Simple LED Matrix Uploader</h1>"
+                "<p style='text-align: center; color: #7f8c8d;'>Basic WiFi firmware uploader with LED matrix output</p>"
                 
                 "<div class='upload-form'>"
                 "<h3>📁 File Upload</h3>"
@@ -54,8 +56,7 @@ void handleRoot() {
             "<h3>📊 Last Upload Info</h3>"
             "<p><strong>File:</strong> " + lastUploadedFile + "</p>"
             "<p><strong>Size:</strong> " + String(lastUploadedSize) + " bytes</p>"
-            "<p><strong>Hash (SHA256):</strong></p>"
-            "<div class='hash-display'>" + (lastUploadedHash.length() > 0 ? lastUploadedHash : "Calculating...") + "</div>"
+            "<p><strong>Status:</strong> Ready for LED matrix output</p>"
             "</div>";
   } else {
     page += "<div class='status info'>"
@@ -63,14 +64,20 @@ void handleRoot() {
             "</div>";
   }
   
-  page += "<div class='endpoints'>"
+  page += "<div class='status info'>"
+          "<h3>🎨 LED Matrix Status</h3>"
+          "<p><strong>Data Pin:</strong> GPIO3 (RX) - Configured for matrix output</p>"
+          "<p><strong>Clock Pin:</strong> GPIO1 (TX) - Available if needed</p>"
+          "<p><strong>Status:</strong> " + (lastUploadedFile.length() > 0 ? "Data ready for matrix output" : "Waiting for file upload") + "</p>"
+          "</div>"
+          
+          "<div class='status info'>"
           "<h3>🔗 Available Endpoints</h3>"
           "<ul>"
           "<li><strong>GET /</strong> - This page</li>"
           "<li><strong>POST /upload</strong> - File upload</li>"
-          "<li><strong>GET /firmware-hash</strong> - Get uploaded file hash (JSON)</li>"
-          "<li><strong>GET /status</strong> - System status (JSON)</li>"
-          "<li><strong>GET /system-info</strong> - System information (JSON)</li>"
+          "<li><strong>POST /send-to-matrix</strong> - Send file to LED matrix</li>"
+          "<li><strong>GET /status</strong> - System status</li>"
           "</ul>"
           "</div>"
           "</div></body></html>";
@@ -78,7 +85,7 @@ void handleRoot() {
   server.send(200, "text/html", page);
 }
 
-// Handle uploaded file with hash calculation
+// Handle uploaded file - SIMPLIFIED VERSION
 File uploadFile;
 
 void handleFileUpload() {
@@ -92,7 +99,6 @@ void handleFileUpload() {
     // Reset tracking variables
     lastUploadedFile = upload.filename;
     lastUploadedSize = 0;
-    lastUploadedHash = "";
     
     // Remove existing file if it exists
     if (SPIFFS.exists(filename)) {
@@ -121,93 +127,83 @@ void handleFileUpload() {
     if (uploadFile) {
       uploadFile.close();
       Serial.printf("Upload End: %s (%u bytes)\n", upload.filename.c_str(), upload.totalSize);
+      Serial.println("✅ File upload completed successfully");
       
-      // Calculate hash of uploaded file
-      lastUploadedHash = calculateFileHash("/" + lastUploadedFile);
-      Serial.printf("File Hash (SHA256): %s\n", lastUploadedHash.c_str());
-      
-      // Verify file integrity
-      if (SPIFFS.exists("/" + lastUploadedFile)) {
-        File f = SPIFFS.open("/" + lastUploadedFile, "r");
-        if (f) {
-          size_t actualSize = f.size();
-          f.close();
-          
-          if (actualSize == lastUploadedSize) {
-            Serial.println("✅ File upload verified successfully");
-          } else {
-            Serial.printf("⚠️  Size mismatch: Expected %u, Got %u\n", lastUploadedSize, actualSize);
-          }
-        }
-      }
-      
-      // Send success response with file info
-      String response = "{\"status\":\"success\",\"message\":\"Upload completed\",\"file\":\"" + lastUploadedFile + "\",\"size\":" + String(lastUploadedSize) + ",\"hash\":\"" + lastUploadedHash + "\"}";
+      // Send success response
+      String response = "{\"status\":\"success\",\"message\":\"Upload completed\",\"file\":\"" + lastUploadedFile + "\",\"size\":" + String(lastUploadedSize) + "}";
       server.send(200, "application/json", response);
     }
   }
 }
 
-// Calculate SHA256 hash of file using BearSSL
-String calculateFileHash(String filePath) {
+// Send file to LED matrix - SIMPLIFIED VERSION
+void sendToMatrix(String filePath) {
   File f = SPIFFS.open(filePath, "r");
   if (!f) {
-    Serial.println("Failed to open file for hash calculation");
-    return "";
+    Serial.println("⚠️ Failed to open file for matrix output");
+    return;
   }
+
+  Serial.println("➡️ Sending uploaded file to LED matrix via GPIO3...");
+  Serial.printf("📁 File: %s\n", filePath.c_str());
+  Serial.printf("📏 Size: %u bytes\n", f.size());
   
-  // Initialize SHA256 context
-  br_sha256_context sha256_ctx;
-  br_sha256_init(&sha256_ctx);
+  // Reset matrix data pin
+  digitalWrite(MATRIX_DATA_PIN, LOW);
+  delayMicroseconds(100);
   
-  uint8_t buf[512];
+  size_t bytesSent = 0;
   
+  // Simple bit-banging output
   while (f.available()) {
-    size_t len = f.read(buf, sizeof(buf));
-    br_sha256_update(&sha256_ctx, buf, len);
+    uint8_t byte = f.read();
+    
+    // Send each bit to the data pin (MSB first)
+    for (int bit = 7; bit >= 0; bit--) {
+      digitalWrite(MATRIX_DATA_PIN, (byte >> bit) & 0x01);
+      delayMicroseconds(100); // Slower for reliability
+    }
+    
+    bytesSent++;
+    
+    // Progress indicator every 100 bytes
+    if (bytesSent % 100 == 0) {
+      Serial.printf("📤 Sent %u bytes to matrix...\n", bytesSent);
+    }
   }
+  
   f.close();
   
-  // Finalize hash
-  uint8_t hash[32];
-  br_sha256_out(&sha256_ctx, hash);
+  // Send end marker
+  digitalWrite(MATRIX_DATA_PIN, LOW);
+  delayMicroseconds(200);
   
-  // Convert to hex string
-  String hashString = "";
-  for (int i = 0; i < 32; i++) {
-    if (hash[i] < 0x10) hashString += "0";
-    hashString += String(hash[i], HEX);
-  }
-  
-  return hashString;
+  Serial.printf("✅ Successfully sent %u bytes to LED matrix via GPIO3\n", bytesSent);
+  Serial.println("🎉 Matrix should now display the uploaded pattern!");
 }
 
-// Handle firmware hash endpoint - CRITICAL for verification
-void handleFirmwareHash() {
-  if (lastUploadedHash.length() > 0) {
-    // Return the hash of the last uploaded file
-    String response = "{\"status\":\"success\",\"file\":\"" + lastUploadedFile + "\",\"size\":" + String(lastUploadedSize) + ",\"hash\":\"" + lastUploadedHash + "\"}";
+// Manual matrix output endpoint
+void handleSendToMatrix() {
+  if (lastUploadedFile.length() > 0) {
+    Serial.println("🔄 Manual matrix output requested...");
+    sendToMatrix("/" + lastUploadedFile);
+    
+    String response = "{\"status\":\"success\",\"message\":\"File sent to matrix\",\"file\":\"" + lastUploadedFile + "\",\"size\":" + String(lastUploadedSize) + "}";
     server.send(200, "application/json", response);
   } else {
-    server.send(404, "application/json", "{\"status\":\"error\",\"message\":\"No firmware file uploaded yet\"}");
+    server.send(404, "application/json", "{\"status\":\"error\",\"message\":\"No file uploaded yet\"}");
   }
 }
 
-// Handle system status endpoint
+// System status endpoint
 void handleStatus() {
-  String response = "{\"status\":\"online\",\"uptime\":" + String(millis()) + ",\"free_heap\":" + String(ESP.getFreeHeap()) + ",\"last_upload\":\"" + lastUploadedFile + "\",\"supports_hash_verification\":true}";
-  server.send(200, "application/json", response);
-}
-
-// Handle system info endpoint
-void handleSystemInfo() {
-  String response = "{\"chip_id\":\"" + String(ESP.getChipId(), HEX) + "\",\"flash_size\":" + String(ESP.getFlashChipSize()) + ",\"sdk_version\":\"" + ESP.getSdkVersion() + "\",\"firmware_type\":\"enhanced_led_matrix_uploader_with_hash_verification\"}";
+  String response = "{\"status\":\"online\",\"uptime\":" + String(millis()) + ",\"free_heap\":" + String(ESP.getFreeHeap()) + ",\"last_upload\":\"" + lastUploadedFile + "\",\"matrix_data_pin\":3,\"matrix_output_ready\":" + (lastUploadedFile.length() > 0 ? "true" : "false") + "}";
   server.send(200, "application/json", response);
 }
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("\n=== Enhanced LED Matrix Uploader with Hash Verification ===");
+  Serial.println("\n=== Simple Working LED Matrix Uploader ===");
   
   // Initialize SPIFFS
   if (!SPIFFS.begin()) {
@@ -216,6 +212,15 @@ void setup() {
   }
   Serial.println("SPIFFS initialized");
   
+  // Configure LED matrix pins
+  pinMode(MATRIX_DATA_PIN, OUTPUT);
+  pinMode(MATRIX_CLOCK_PIN, OUTPUT);
+  digitalWrite(MATRIX_DATA_PIN, LOW);
+  digitalWrite(MATRIX_CLOCK_PIN, LOW);
+  Serial.println("🎨 LED Matrix pins configured:");
+  Serial.printf("   Data Pin (GPIO3): OUTPUT, LOW\n");
+  Serial.printf("   Clock Pin (GPIO1): OUTPUT, LOW\n");
+
   // Start Wi-Fi AP
   WiFi.softAP(apSSID, apPASS);
   Serial.println("WiFi AP Started");
@@ -229,25 +234,14 @@ void setup() {
 
   // Setup web server routes
   server.on("/", HTTP_GET, handleRoot);
-  
-  // File upload endpoint
-  server.on("/upload", HTTP_POST, []() {
-    server.send(200, "application/json", "{\"status\":\"success\",\"message\":\"Upload endpoint ready\"}");
-  }, handleFileUpload);
-  
-  // Firmware hash endpoint - CRITICAL for verification
-  server.on("/firmware-hash", HTTP_GET, handleFirmwareHash);
-  
-  // System status endpoint
+  server.on("/upload", HTTP_POST, handleFileUpload);
+  server.on("/send-to-matrix", HTTP_POST, handleSendToMatrix);
   server.on("/status", HTTP_GET, handleStatus);
-  
-  // System info endpoint
-  server.on("/system-info", HTTP_GET, handleSystemInfo);
 
   server.begin();
-  Serial.println("Web server started with enhanced endpoints");
-  Serial.println("✅ Hash verification endpoint /firmware-hash is now available!");
-  Serial.println("🎉 Your ESP-01 now supports TRUE verification!");
+  Serial.println("Web server started with simplified endpoints");
+  Serial.println("🎨 Matrix output endpoint /send-to-matrix is available!");
+  Serial.println("🎉 Your ESP-01 now supports basic file upload AND LED matrix output!");
 }
 
 void loop() {
@@ -260,7 +254,8 @@ void loop() {
     Serial.printf("System Status - Free Heap: %u bytes, Uptime: %lu ms\n", 
                   ESP.getFreeHeap(), millis());
     if (lastUploadedFile.length() > 0) {
-      Serial.printf("Last Upload: %s (%u bytes)\n", lastUploadedFile.c_str(), lastUploadedSize);
+      Serial.printf("Last Upload: %s (%u bytes) - Ready for matrix output\n", 
+                    lastUploadedFile.c_str(), lastUploadedSize);
     }
   }
 }

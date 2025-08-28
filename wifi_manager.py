@@ -19,7 +19,7 @@ class WiFiManager:
         self.connected = False
         self.ip_address = None
         self.port = None
-        self.timeout = 10.0
+        self.timeout = 120.0  # 120 seconds timeout for large files
         self.retry_count = 3
         self.retry_delay = 1.0
         
